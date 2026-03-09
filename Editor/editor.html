@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор Сценариев | Кто хочет стать миллионером</title>
+    <style>
+        /* --- СОВРЕМЕННЫЙ ДИЗАЙН (Dark Theme) --- */
+        :root {
+            --bg-color: #050b14;
+            --card-bg: #111a2c;
+            --border-color: #2a3b5c;
+            --gold: #f0a500;
+            --gold-hover: #ffb81c;
+            --text-main: #ffffff;
+            --text-muted: #8daac8;
+            --danger: #ff4757;
+            --success: #2ed573;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-main);
+            margin: 0; padding: 20px; display: flex; justify-content: center;
+        }
+
+        .app-container { width: 100%; max-width: 900px; }
+
+        /* --- ШАПКА --- */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(135deg, #0a1325, #111a2c);
+            padding: 20px 30px; border-radius: 12px; border: 1px solid var(--border-color);
+            margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: sticky; top: 20px; z-index: 100;
+        }
+
+        .header h1 { margin: 0; font-size: 24px; font-weight: 600; color: var(--gold); letter-spacing: 1px; }
+
+        .btn {
+            padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px;
+            font-weight: bold; cursor: pointer; transition: all 0.2s ease; text-transform: uppercase;
+        }
+        
+        .btn-primary { background: var(--gold); color: #000; box-shadow: 0 4px 15px rgba(240, 165, 0, 0.3); }
+        .btn-primary:hover { background: var(--gold-hover); transform: translateY(-2px); }
+        
+        .btn-secondary { background: transparent; color: var(--text-muted); border: 1px dashed var(--border-color); width: 100%; padding: 20px; margin-top: 20px;}
+        .btn-secondary:hover { border-color: var(--gold); color: var(--gold); background: rgba(240, 165, 0, 0.05); }
+
+        .btn-icon { background: transparent; color: var(--text-muted); border: none; font-size: 20px; padding: 5px; cursor: pointer; }
+        .btn-icon:hover { color: var(--danger); }
+
+        /* --- КАРТОЧКА ВОПРОСА --- */
+        .question-card {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 25px; margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .card-title { font-size: 18px; color: var(--text-muted); margin: 0; font-weight: 500;}
+
+        /* --- ИНПУТЫ --- */
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; }
+        
+        input[type="text"] {
+            width: 100%; background: #050b14; border: 1px solid #2a3b5c; color: #fff;
+            padding: 15px; border-radius: 8px; font-size: 16px; outline: none; transition: 0.2s;
+        }
+        input[type="text"]:focus { border-color: var(--gold); box-shadow: 0 0 10px rgba(240, 165, 0, 0.2); }
+
+        /* --- СЕТКА ОТВЕТОВ --- */
+        .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .answer-row {
+            display: flex; align-items: center; background: #050b14; 
+            border: 1px solid #2a3b5c; border-radius: 8px; padding-left: 15px; transition: 0.2s;
+        }
+        .answer-row:focus-within { border-color: var(--gold); }
+        
+        .answer-row input[type="text"] { border: none; background: transparent; padding: 15px 15px 15px 10px; box-shadow: none; }
+        
+        /* Кастомный Radio Button */
+        .custom-radio {
+            appearance: none; width: 22px; height: 22px; border: 2px solid var(--border-color);
+            border-radius: 50%; cursor: pointer; position: relative; outline: none; flex-shrink: 0;
+        }
+        .custom-radio:checked { border-color: var(--success); }
+        .custom-radio:checked::after {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 12px; height: 12px; background: var(--success); border-radius: 50%;
+        }
+
+        .prefix { color: var(--gold); font-weight: bold; font-size: 18px; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- ШАПКА -->
+        <div class="header">
+            <h1>Конструктор Сценариев</h1>
+            <button class="btn btn-primary" onclick="exportToTxt()">📥 Скачать questions.txt</button>
+        </div>
+
+        <!-- СПИСОК ВОПРОСОВ -->
+        <div id="questions-list"></div>
+
+        <!-- ДОБАВИТЬ ВОПРОС -->
+        <button class="btn btn-secondary" onclick="addQuestion()">+ ДОБАВИТЬ ВОПРОС</button>
+    </div>
+
+    <script>
+        // --- STATE MANAGEMENT (Состояние приложения) ---
+        let questions = [
+            { q: "", a: ["", "", "", ""], c: 0 } // Стартовый пустой вопрос
+        ];
+
+        const listContainer = document.getElementById('questions-list');
+        const prefixes = ["A", "B", "C", "D"];
+
+        // --- РЕНДЕР ИНТЕРФЕЙСА ---
+        function render() {
+            listContainer.innerHTML = '';
+            
+            questions.forEach((item, qIndex) => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                
+                // Генерируем уникальное имя для группы радиокнопок
+                const radioGroup = `q_${qIndex}_correct`;
+
+                // HTML Карточки
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h2 class="card-title">Вопрос ${qIndex + 1}</h2>
+                        ${questions.length > 1 ? `<button class="btn-icon" onclick="removeQuestion(${qIndex})" title="Удалить вопрос">🗑</button>` : ''}
+                    </div>
+
+                    <div class="input-group">
+                        <label>Текст вопроса</label>
+                        <input type="text" placeholder="Введите вопрос..." value="${item.q}" 
+                               oninput="updateData(${qIndex}, 'q', null, this.value)">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Варианты ответов (отметьте правильный)</label>
+                        <div class="answers-grid">
+                            ${item.a.map((ans, aIndex) => `
+                                <div class="answer-row">
+                                    <input type="radio" class="custom-radio" name="${radioGroup}" 
+                                           ${item.c === aIndex ? 'checked' : ''} 
+                                           onchange="updateData(${qIndex}, 'c', null, ${aIndex})">
+                                    <span class="prefix">${prefixes[aIndex]}:</span>
+                                    <input type="text" placeholder="Ответ ${prefixes[aIndex]}" value="${ans}"
+                                           oninput="updateData(${qIndex}, 'a', ${aIndex}, this.value)">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        // --- ОБНОВЛЕНИЕ ДАННЫХ (Two-way binding) ---
+        function updateData(qIndex, field, aIndex, value) {
+            // Защита от парсера VBA: удаляем символ "|" (вертикальная черта), так как он разделитель!
+            if (typeof value === 'string') {
+                value = value.replace(/\|/g, ''); 
+            }
+
+            if (field === 'q') questions[qIndex].q = value;
+            if (field === 'a') questions[qIndex].a[aIndex] = value;
+            if (field === 'c') questions[qIndex].c = value;
+        }
+
+        // --- УПРАВЛЕНИЕ МАССИВОМ ---
+        function addQuestion() {
+            questions.push({ q: "", a: ["", "", "", ""], c: 0 });
+            render();
+            // Скроллим вниз к новому вопросу
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        function removeQuestion(index) {
+            if (confirm("Точно удалить этот вопрос?")) {
+                questions.splice(index, 1);
+                render();
+            }
+        }
+
+        // --- ЭКСПОРТ (ГЕНЕРАТОР TXT) ---
+        function exportToTxt() {
+            // 1. Валидация (проверяем, что нет пустых полей)
+            let isValid = true;
+            questions.forEach((item, idx) => {
+                if (!item.q.trim() || item.a.some(ans => !ans.trim())) {
+                    isValid = false;
+                    alert(`Ошибка! Заполните все поля в вопросе №${idx + 1}`);
+                }
+            });
+            if (!isValid) return;
+
+            // 2. Сборка строк
+            let txtContent = "";
+            questions.forEach(item => {
+                // Формат: Вопрос|A|B|C|D|ИндексПравильного
+                txtContent += `${item.q.trim()}|${item.a[0].trim()}|${item.a[1].trim()}|${item.a[2].trim()}|${item.a[3].trim()}|${item.c}\n`;
+            });
+
+            // 3. Создание файла (Blob) с кодировкой UTF-8
+            const blob = new Blob([txtContent], { type: "text/plain;charset=utf-8" });
+            
+            // 4. Имитация клика для скачивания файла
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "questions.txt";
+            link.style.display = "none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Визуальный фидбек
+            const btn = document.querySelector('.btn-primary');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "✅ СКАЧАНО!";
+            btn.style.background = "var(--success)";
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = "var(--gold)";
+            }, 2000);
+        }
+
+        // Первичный рендер при загрузке
+        render();
+    </script>
+</body>
+</html>
